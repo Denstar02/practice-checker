@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Анализатор отчётов по педагогической практике</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',system-ui,sans-serif;background:#f4f5f7;color:#1a1a1a;min-height:100vh;display:flex;flex-direction:column}
+    .mono{font-family:'JetBrains Mono',monospace}
+
+    /* ── Topbar ── */
+    .topbar{background:#0f172a;color:#fff;padding:0 28px;height:56px;display:flex;align-items:center;gap:14px;flex-shrink:0;position:sticky;top:0;z-index:100;border-bottom:1px solid rgba(255,255,255,.06)}
+    .topbar .logo{display:flex;align-items:center;gap:10px}
+    .topbar .logo-icon{width:32px;height:32px;border-radius:10px;background:rgba(99,102,241,.2);display:flex;align-items:center;justify-content:center}
+    .topbar h1{font-size:15px;font-weight:700;letter-spacing:-.3px}
+    .topbar .sep{width:1px;height:24px;background:rgba(255,255,255,.1);margin:0 6px}
+    .topbar .model-area{display:flex;align-items:center;gap:8px;margin-left:auto}
+    .topbar .badge{font-size:9px;font-weight:600;color:#34d399;background:rgba(52,211,153,.12);padding:2px 8px;border-radius:8px;letter-spacing:.5px;text-transform:uppercase}
+    .topbar select{padding:5px 10px;border:1px solid rgba(255,255,255,.12);border-radius:8px;font-size:12px;font-family:'Inter',sans-serif;background:rgba(255,255,255,.06);color:#fff;outline:none;cursor:pointer}
+    .topbar select option{background:#1e293b;color:#fff}
+
+    /* ── Layout ── */
+    .layout{display:flex;flex:1;overflow:hidden}
+    .sidebar{width:340px;min-width:340px;background:#fff;border-right:1px solid #e8e8ec;display:flex;flex-direction:column;overflow:hidden}
+    .main{flex:1;overflow-y:auto;padding:24px 32px 48px}
+
+    /* ── Sidebar ── */
+    .sb-header{padding:16px 20px;border-bottom:1px solid #f0f0f0;font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;justify-content:space-between}
+    .sb-header .cnt{font-weight:600;color:#6366f1;font-size:11px;background:#eef2ff;padding:2px 8px;border-radius:8px}
+
+    .sb-upload{padding:16px 20px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .2s;text-align:center}
+    .sb-upload:hover{background:#fafaff}
+    .sb-upload.drag{background:#eef2ff}
+    .sb-upload .ic{width:40px;height:40px;border-radius:12px;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+    .sb-upload .t1{font-size:13px;font-weight:600;color:#333}
+    .sb-upload .t2{font-size:11px;color:#aaa;margin-top:2px}
+
+    .sb-files{flex:1;overflow-y:auto;padding:8px 12px}
+    .sf{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:4px;transition:background .15s;cursor:default}
+    .sf:hover{background:#f8f8fb}
+    .sf .sf-icon{width:32px;height:32px;border-radius:8px;background:#f5f5f8;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .sf .sf-info{flex:1;min-width:0}
+    .sf .sf-name{font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sf .sf-meta{font-size:10px;color:#aaa}
+    .sf .sf-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap}
+    .sfs-wait{background:#f5f5f5;color:#999}
+    .sfs-run{background:#eef2ff;color:#6366f1}
+    .sfs-done{background:#ecfdf5;color:#047857}
+    .sfs-err{background:#fef2f2;color:#b91c1c}
+    .sf .sf-score{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;min-width:28px;text-align:right}
+    .sf .sf-rm{width:24px;height:24px;border:none;background:none;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#ccc;transition:all .15s;flex-shrink:0}
+    .sf .sf-rm:hover{background:#fef2f2;color:#ef4444}
+
+    .sb-action{padding:12px 20px;border-top:1px solid #f0f0f0}
+    .sb-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;border:none;font-size:13px;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(135deg,#6366f1,#7c3aed);box-shadow:0 2px 12px rgba(99,102,241,.25);transition:all .2s;font-family:'Inter',sans-serif}
+    .sb-btn:hover{box-shadow:0 4px 20px rgba(99,102,241,.35)}.sb-btn:active{transform:scale(.98)}
+    .sb-btn:disabled{background:#9ca3af;box-shadow:none;cursor:wait}
+
+    /* ── Progress bar ── */
+    .pbar-wrap{padding:12px 20px;border-top:1px solid #f0f0f0}
+    .pbar-info{display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px}
+    .pbar{height:6px;background:#f0f0f0;border-radius:6px;overflow:hidden}
+    .pbar-fill{height:100%;background:linear-gradient(90deg,#6366f1,#7c3aed);border-radius:6px;transition:width .4s ease}
+
+    /* ── Main area ── */
+    .welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;color:#bbb;padding:40px}
+    .welcome .wic{width:72px;height:72px;border-radius:20px;background:#f0f0f5;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+    .welcome h2{font-size:18px;font-weight:700;color:#999;margin-bottom:6px}
+    .welcome p{font-size:13px;max-width:360px;line-height:1.6}
+
+    /* Bento criteria */
+    .sl{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:#bbb;margin-bottom:12px}
+    .bg-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+    .bc{border-radius:14px;padding:18px;position:relative;overflow:hidden;transition:transform .2s;cursor:default}
+    .bc:hover{transform:translateY(-2px)}
+    .bc .blob{position:absolute;right:-24px;top:-24px;width:100px;height:100px;border-radius:50%;opacity:.12}
+    .bc .iw{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}
+    .bc h3{font-size:13px;font-weight:700;margin-bottom:4px;line-height:1.3}
+    .bc p{font-size:11px;color:#888;line-height:1.5}
+
+    /* Summary table */
+    .stbl{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;border-radius:14px;overflow:hidden;border:1px solid #e8e8ec;background:#fff;margin-bottom:20px}
+    .stbl th{background:#f8f9fc;padding:12px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888;border-bottom:1px solid #e8e8ec}
+    .stbl td{padding:12px 16px;border-bottom:1px solid #f5f5f8;vertical-align:middle}
+    .stbl tr:last-child td{border-bottom:none}
+    .stbl tr:hover td{background:#fafaff}
+    .stbl .sc{font-family:'JetBrains Mono',monospace;font-weight:700}
+    .stbl .fname-cell{font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    .status-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .sd{background:#ecfdf5;color:#047857;border:1px solid #a7f3d0}
+    .sp{background:#fffbeb;color:#b45309;border:1px solid #fde68a}
+    .sm{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca}
+
+    /* Errors */
+    .ebox{display:flex;align-items:flex-start;gap:10px;border-radius:12px;border:1px solid #fecaca;background:#fef2f2;padding:12px 16px;margin-bottom:10px;font-size:12px;color:#b91c1c;line-height:1.5}
+
+    /* Per-file result */
+    .rfile{border-radius:14px;border:1px solid #e8e8ec;background:#fff;overflow:hidden;margin-bottom:10px}
+    .rfile-h{padding:14px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:background .15s}
+    .rfile-h:hover{background:#fafaff}
+    .rfile-h .rn{font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .rfile-b{display:none;border-top:1px solid #f0f0f0;padding:18px}
+    .rfile-b.open{display:block}
+    .chevron{transition:transform .3s;color:#ccc;flex-shrink:0}.chevron.open{transform:rotate(180deg)}
+
+    .ms{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+    .mc{border-radius:10px;background:#f8f9fc;padding:10px;text-align:center}
+    .mc .s{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700}
+    .mc .n{font-size:9px;color:#aaa;font-weight:500;margin-top:2px}
+
+    .crit-card{border-radius:10px;border:1px solid #f0f0f0;overflow:hidden;margin-bottom:6px}
+    .crit-h{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .15s}
+    .crit-h:hover{background:#fafaff}
+    .crit-h .ct{flex:1;min-width:0}
+    .crit-h h5{font-size:12px;font-weight:600;margin-bottom:2px}
+    .crit-b{display:none;padding:0 14px 14px;border-top:1px solid #f5f5f5}
+    .crit-b.open{display:block}
+    .crit-b .cm{font-size:12px;line-height:1.7;color:#555;padding-top:10px;margin-bottom:10px}
+    .tag-section{margin-bottom:10px}
+    .tag-label{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+    .tags{display:flex;flex-wrap:wrap;gap:4px}
+    .tag{padding:2px 8px;border-radius:6px;font-size:10px;border:1px solid}
+    .tg{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+    .tr{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+    .rlist{padding-left:16px}.rlist li{font-size:11px;line-height:1.6;color:#555;margin-bottom:2px}
+
+    .rbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;border:2px solid #e5e5e5;background:#fff;font-size:13px;font-weight:600;color:#666;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
+    .rbtn:hover{border-color:#c7d2fe;color:#6366f1}
+
+    .hidden{display:none!important}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner{width:16px;height:16px;border:2px solid #e5e5e5;border-top-color:#6366f1;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.fu{animation:fadeUp .4s ease forwards}
+
+    @media(max-width:800px){
+      .layout{flex-direction:column}
+      .sidebar{width:100%;min-width:0;max-height:40vh;border-right:none;border-bottom:1px solid #e8e8ec}
+      .bg-grid{grid-template-columns:repeat(2,1fr)}
+      .ms{grid-template-columns:repeat(2,1fr)}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></div>
+    <h1>Анализатор отчётов</h1>
+  </div>
+  <div class="sep"></div>
+  <span style="font-size:11px;color:#64748b">Педагогическая практика</span>
+  <div class="model-area">
+    <span class="badge">API подключён</span>
+    <select id="modelSel"></select>
+  </div>
+</div>
+
+<!-- ═══ LAYOUT ═══ -->
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sb-header">
+      <span>Файлы</span>
+      <span id="fileCount" class="cnt" style="display:none">0</span>
+    </div>
+
+    <div id="uploadZone" class="sb-upload">
+      <input type="file" id="fileInput" accept=".docx,.pdf,.txt" multiple style="display:none">
+      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
+      <div class="t1">Загрузить файлы</div>
+      <div class="t2">.docx .pdf .txt • до 50</div>
+    </div>
+
+    <div id="fileList" class="sb-files"></div>
+
+    <div id="pbarWrap" class="pbar-wrap hidden">
+      <div class="pbar-info"><span id="pbarLabel">Обработка...</span><span id="pbarPct">0/0</span></div>
+      <div class="pbar"><div id="pbarFill" class="pbar-fill" style="width:0%"></div></div>
+    </div>
+
+    <div id="actionArea" class="sb-action hidden">
+      <button id="analyzeBtn" class="sb-btn" onclick="startBatch()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+        <span id="btnText">Запустить анализ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <!-- Welcome / Criteria -->
+    <div id="welcomeArea">
+      <div class="sl">Критерии проверки</div>
+      <div class="bg-grid" id="bentoGrid"></div>
+      <div class="welcome">
+        <div class="wic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
+        <h2>Загрузите отчёты</h2>
+        <p>Перетащите файлы в панель слева или нажмите «Загрузить файлы». После загрузки нажмите «Запустить анализ».</p>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="errorArea" class="ebox hidden" style="margin-top:12px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      <div><b>Ошибка:</b> <span id="errorText"></span></div>
+    </div>
+
+    <!-- Results -->
+    <div id="resultsArea" class="hidden fu"></div>
+  </div>
+</div>
+
+<script>
+const files=[];let isRunning=false;
+const CRITERIA=[
+  {id:1,title:"Анализ нормативной документации",short:"Норм. док.",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>',accent:"#6366f1",al:"#eef2ff",desc:"ФГОС СПО, ОПОП, учебный план, рабочие программы, МДК"},
+  {id:2,title:"Место дисциплины",short:"Место дисц.",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',accent:"#f59e0b",al:"#fffbeb",desc:"Вклад в компетенции, объём нагрузки, таблица"},
+  {id:3,title:"Междисциплинарные связи",short:"Межд. связи",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>',accent:"#10b981",al:"#ecfdf5",desc:"Предшествующие/последующие связи, схема"},
+  {id:4,title:"Внутридисциплинарные связи",short:"Внутр. связи",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',accent:"#ec4899",al:"#fdf2f8",desc:"Анализ КТП, связи темы, схема"},
+];
+
+// Bento
+const grid=document.getElementById("bentoGrid");
+CRITERIA.forEach(c=>{grid.innerHTML+=`<div class="bc" style="background:linear-gradient(135deg,${c.al} 0%,#fff 70%);border:1px solid ${c.accent}18"><div class="blob" style="background:radial-gradient(circle,${c.accent} 0%,transparent 70%)"></div><div style="position:relative;z-index:1"><div class="iw" style="background:${c.accent}15;color:${c.accent}">${c.icon}</div><h3>${c.short}</h3><p>${c.desc}</p></div></div>`});
+
+// Models
+(async()=>{try{const r=await fetch("/api/models");const m=await r.json();const s=document.getElementById("modelSel");s.innerHTML="";m.forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name;s.appendChild(o)})}catch(e){console.warn(e)}})();
+
+// Upload
+const zone=document.getElementById("uploadZone"),inp=document.getElementById("fileInput");
+zone.addEventListener("click",()=>inp.click());
+zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag")});
+zone.addEventListener("dragleave",()=>zone.classList.remove("drag"));
+zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("drag");addFiles(e.dataTransfer.files)});
+inp.addEventListener("change",()=>{addFiles(inp.files);inp.value=""});
+
+// Also allow drop on sidebar
+const sidebar=document.querySelector(".sidebar");
+sidebar.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag")});
+sidebar.addEventListener("dragleave",e=>{if(!sidebar.contains(e.relatedTarget))zone.classList.remove("drag")});
+sidebar.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("drag");addFiles(e.dataTransfer.files)});
+
+async function addFiles(fl){
+  hideError();
+  for(const f of fl){
+    if(files.length>=50){showError("Максимум 50 файлов");break}
+    if(files.find(x=>x.name===f.name))continue;
+    const entry={file:f,name:f.name,size:f.size,text:"",status:"extracting",result:null,error:null};
+    files.push(entry);renderFileList();
+    try{entry.text=await extractText(f);entry.status="ready"}catch(e){entry.status="error";entry.error="Ошибка: "+e.message}
+    renderFileList();
+  }
+  updateBtn();
+}
+function removeFile(idx){
+  files.splice(idx,1);
+  renderFileList();
+  updateBtn();
+  // Обновить результаты если они отображаются
+  const ra=document.getElementById("resultsArea");
+  if(!ra.classList.contains("hidden")&&files.some(f=>f.status==="done")){renderResults()}
+  else if(!files.some(f=>f.status==="done")){ra.classList.add("hidden");ra.innerHTML="";document.getElementById("welcomeArea").classList.remove("hidden")}
+  if(!files.length){document.getElementById("actionArea").classList.add("hidden")}
+}
+
+function updateBtn(){
+  const ready=files.filter(f=>f.status==="ready").length;
+  const act=document.getElementById("actionArea");
+  if(ready>0){act.classList.remove("hidden");document.getElementById("btnText").textContent=`Анализ (${ready} ${ready===1?"файл":ready<5?"файла":"файлов"})`}
+  else if(!files.length){act.classList.add("hidden")}
+  document.getElementById("fileCount").style.display=files.length?"inline":"none";
+  document.getElementById("fileCount").textContent=files.length;
+}
+
+function renderFileList(){
+  const el=document.getElementById("fileList");
+  el.innerHTML=files.map((f,i)=>{
+    let st="",cls="";
+    if(f.status==="extracting"){st="...";cls="sfs-run"}
+    else if(f.status==="ready"){st="готов";cls="sfs-wait"}
+    else if(f.status==="analyzing"){st='<span class="spinner"></span>';cls="sfs-run"}
+    else if(f.status==="done"){st=`<span class="sf-score" style="color:${sColor(f.result?.overall_score)}">${f.result?.overall_score??"-"}</span>`;cls="sfs-done"}
+    else{st="!";cls="sfs-err"}
+    return`<div class="sf">
+      <div class="sf-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+      <div class="sf-info"><div class="sf-name">${f.name}</div><div class="sf-meta">${(f.size/1024).toFixed(0)} КБ${f.text?` • ${(f.text.length/1000).toFixed(1)}k`:""}</div></div>
+      <div class="sf-status ${cls}">${st}</div>
+      ${f.status==="analyzing"?"":`<button class="sf-rm" onclick="removeFile(${i})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`}</div>`
+  }).join("");
+}
+
+function sColor(s){return s>=70?"#10b981":s>=40?"#f59e0b":"#ef4444"}
+
+async function extractText(file){
+  const ext=file.name.split(".").pop().toLowerCase();
+  if(ext==="txt")return await file.text();
+  if(ext==="docx"){return(await mammoth.extractRawText({arrayBuffer:await file.arrayBuffer()})).value}
+  if(ext==="pdf"){
+    const raw=new TextDecoder("utf-8",{fatal:false}).decode(new Uint8Array(await file.arrayBuffer()));let t="";
+    (raw.match(/\(([^)]*)\)\s*Tj/g)||[]).forEach(m=>{const x=m.match(/\(([^)]*)\)/);if(x)t+=x[1]+" "});
+    (raw.match(/\[([^\]]*)\]\s*TJ/gi)||[]).forEach(m=>{(m.match(/\(([^)]*)\)/g)||[]).forEach(p=>{const x=p.match(/\(([^)]*)\)/);if(x)t+=x[1]});t+=" "});
+    return t.trim().length<50?"⚠️ PDF: текст не извлечён":t;
+  }
+  throw new Error("Неподдерживаемый формат");
+}
+
+async function startBatch(){
+  const ready=files.filter(f=>f.status==="ready"||f.status==="error");
+  if(!ready.length)return;
+  isRunning=true;const btn=document.getElementById("analyzeBtn");btn.disabled=true;
+  document.getElementById("btnText").textContent="Анализ...";
+  hideError();document.getElementById("resultsArea").classList.add("hidden");
+  const total=ready.length;let done=0;
+  document.getElementById("pbarWrap").classList.remove("hidden");
+  const model=document.getElementById("modelSel").value;
+  for(const f of ready){
+    f.status="analyzing";f.result=null;f.error=null;renderFileList();
+    document.getElementById("pbarLabel").textContent=f.name;
+    document.getElementById("pbarPct").textContent=`${done}/${total}`;
+    document.getElementById("pbarFill").style.width=Math.round(done/total*100)+"%";
+    try{
+      const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:f.text,model})});
+      if(!res.ok){const e=await res.json().catch(()=>({error:`HTTP ${res.status}`}));throw new Error(e.error||`HTTP ${res.status}`)}
+      const data=await res.json();if(data.error)throw new Error(data.error);
+      f.result=data;f.status="done";
+    }catch(e){f.status="error";f.error=e.message}
+    done++;renderFileList();
+  }
+  document.getElementById("pbarFill").style.width="100%";
+  document.getElementById("pbarPct").textContent=`${total}/${total}`;
+  setTimeout(()=>document.getElementById("pbarWrap").classList.add("hidden"),600);
+  isRunning=false;btn.disabled=false;document.getElementById("btnText").textContent="Повторить";
+  renderFileList();
+  renderResults();
+}
+
+function renderResults(){
+  document.getElementById("welcomeArea").classList.add("hidden");
+  const area=document.getElementById("resultsArea");area.classList.remove("hidden");
+  const ok=files.filter(f=>f.status==="done"),fail=files.filter(f=>f.status==="error");
+  let h="";
+
+  if(ok.length){
+    const avg=Math.round(ok.reduce((s,f)=>s+(f.result?.overall_score||0),0)/ok.length);
+    h+=`<div class="sl">Сводная таблица — ${ok.length} отчётов, средний: <span style="color:${sColor(avg)};font-size:12px">${avg}</span></div>
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Файл</th><th style="text-align:center">Общий</th>${CRITERIA.map(c=>`<th style="text-align:center">${c.short}</th>`).join("")}<th>Статус</th></tr></thead><tbody>`;
+    ok.forEach(f=>{const r=f.result,sc=r?.overall_score||0;
+      h+=`<tr><td class="fname-cell">${f.name}</td><td style="text-align:center"><span class="sc" style="font-size:16px;color:${sColor(sc)}">${sc}</span></td>${CRITERIA.map((_,i)=>{const s=r?.criteria?.[i]?.score;return`<td style="text-align:center"><span class="sc" style="font-size:13px;color:${sColor(s)}">${s??"-"}</span></td>`}).join("")}<td>${sc>=70?'<span class="status-badge sd">соотв.</span>':sc>=40?'<span class="status-badge sp">доработка</span>':'<span class="status-badge sm">переработка</span>'}</td></tr>`});
+    h+=`</tbody></table></div>`;
+  }
+
+  if(fail.length){h+=`<div class="sl" style="color:#b91c1c;margin-top:16px">Ошибки (${fail.length})</div>`;fail.forEach(f=>{h+=`<div class="ebox"><b>${f.name}:</b> ${f.error}</div>`})}
+
+  if(ok.length){
+    h+=`<div class="sl" style="margin-top:20px">Подробные результаты</div>`;
+    ok.forEach(f=>{const r=f.result,sc=r?.overall_score||0;const circ=2*Math.PI*18,off=circ*(1-sc/100);
+      h+=`<div class="rfile"><div class="rfile-h" onclick="tog(this)">
+        <div style="position:relative;width:40px;height:40px;flex-shrink:0"><svg width="40" height="40" style="transform:rotate(-90deg)"><circle cx="20" cy="20" r="16" fill="none" stroke="#f1f5f9" stroke-width="3"/><circle cx="20" cy="20" r="16" fill="none" stroke="${sColor(sc)}" stroke-width="3" stroke-dasharray="${circ}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span class="mono" style="font-size:12px;font-weight:700;color:${sColor(sc)}">${sc}</span></div></div>
+        <div class="rn">${f.name}</div>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </div><div class="rfile-b">
+        <p style="font-size:12px;color:#666;margin-bottom:12px;line-height:1.6">${r?.overall_summary||""}</p>
+        <div class="ms">${CRITERIA.map((_,i)=>{const s=r?.criteria?.[i]?.score||0;return`<div class="mc"><div class="s" style="color:${sColor(s)}">${s}</div><div class="n">${CRITERIA[i].short}</div></div>`}).join("")}</div>
+        ${CRITERIA.map((c,i)=>{const cr=r?.criteria?.[i];if(!cr)return"";const stc=cr.status==="выполнено"?"sd":cr.status==="не выполнено"?"sm":"sp";
+          return`<div class="crit-card"><div class="crit-h" onclick="tog(this)"><div style="color:${c.accent}">${c.icon}</div><div class="ct"><h5>${c.title}</h5><span class="status-badge ${stc}">${cr.status}</span></div><span class="mono" style="font-size:12px;font-weight:700;color:${sColor(cr.score)}">${cr.score}</span><svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="crit-b"><div class="cm">${cr.comment||""}</div>
+          ${cr.found_elements?.length?`<div class="tag-section"><div class="tag-label" style="color:#047857">✓ Обнаружено</div><div class="tags">${cr.found_elements.map(e=>`<span class="tag tg">${e}</span>`).join("")}</div></div>`:""}
+          ${cr.missing_elements?.length?`<div class="tag-section"><div class="tag-label" style="color:#b91c1c">✗ Отсутствует</div><div class="tags">${cr.missing_elements.map(e=>`<span class="tag tr">${e}</span>`).join("")}</div></div>`:""}
+          ${cr.recommendations?.length?`<div class="tag-section"><div class="tag-label" style="color:#1d4ed8">💡 Рекомендации</div><ul class="rlist">${cr.recommendations.map(e=>`<li>${e}</li>`).join("")}</ul></div>`:""}
+          </div></div>`}).join("")}
+      </div></div>`});
+  }
+
+  h+=`<button class="rbtn" onclick="resetAll()" style="margin-top:12px">↻ Начать заново</button>`;
+  area.innerHTML=h;
+}
+
+function tog(el){el.nextElementSibling.classList.toggle("open");el.querySelector(".chevron").classList.toggle("open")}
+function resetAll(){files.length=0;isRunning=false;document.getElementById("actionArea").classList.add("hidden");document.getElementById("resultsArea").classList.add("hidden");document.getElementById("resultsArea").innerHTML="";document.getElementById("welcomeArea").classList.remove("hidden");renderFileList();updateBtn();inp.value=""}
+function showError(m){document.getElementById("errorArea").classList.remove("hidden");document.getElementById("errorText").textContent=m}
+function hideError(){document.getElementById("errorArea").classList.add("hidden")}
+</script>
+</body>
+</html>
