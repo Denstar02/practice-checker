@@ -44,11 +44,19 @@
     .sb-add:hover{background:#eef2ff}
 
     /* Center upload */
-    .center-upload{border-radius:20px;border:2px dashed #ddd;padding:48px 32px;text-align:center;cursor:pointer;transition:all .3s;margin-top:8px;background:#fff}
-    .center-upload:hover{border-color:#a5b4fc;background:rgba(99,102,241,.02);transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.08)}
-    .center-upload.drag{border-color:#6366f1;background:rgba(99,102,241,.04);box-shadow:0 0 0 4px rgba(99,102,241,.1)}
-    .cu-icon{width:64px;height:64px;border-radius:20px;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
-    .cu-tag{font-size:11px;color:#6366f1;background:#eef2ff;padding:4px 12px;border-radius:8px;font-weight:500}
+    .center-upload{border-radius:20px;border:1px solid rgba(99,102,241,.15);padding:64px 32px;text-align:center;cursor:pointer;transition:all .3s;margin-top:8px;background:#0f172a;position:relative;overflow:hidden}
+    .center-upload:hover{border-color:rgba(99,102,241,.4);transform:translateY(-2px);box-shadow:0 8px 40px rgba(99,102,241,.15)}
+    .center-upload.drag{border-color:#6366f1;box-shadow:0 0 0 4px rgba(99,102,241,.2)}
+    .cu-icon{width:64px;height:64px;border-radius:20px;background:rgba(99,102,241,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative;z-index:2}
+    .cu-tag{font-size:11px;color:#a5b4fc;background:rgba(99,102,241,.12);padding:4px 12px;border-radius:8px;font-weight:500;border:1px solid rgba(99,102,241,.15)}
+
+    /* Background beams */
+    .beams-wrap{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+    .beams-wrap svg{position:absolute;width:100%;height:100%}
+    .beam{stroke-width:.5;fill:none;stroke-opacity:0}
+    .beam-bg{stroke:rgba(99,102,241,.06);stroke-width:.5;fill:none}
+    @keyframes beam{0%{stroke-dashoffset:800;stroke-opacity:0}5%{stroke-opacity:.5}50%{stroke-opacity:.3}95%{stroke-opacity:.5}100%{stroke-dashoffset:-800;stroke-opacity:0}}
+    .beam{stroke-dasharray:120 680;animation:beam linear infinite}
 
     .sb-files{flex:1;overflow-y:auto;padding:8px 12px}
     .sf{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:4px;transition:background .15s;cursor:default}
@@ -213,14 +221,43 @@
       <div class="bg-grid" id="bentoGrid"></div>
 
       <div id="uploadZone" class="center-upload">
-        <div class="cu-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
-        <h2 style="font-size:18px;font-weight:700;color:#333;margin-bottom:6px">Загрузите отчёты для проверки</h2>
-        <p style="font-size:13px;color:#999;margin-bottom:16px">Перетащите файлы сюда или нажмите для выбора</p>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-          <span class="cu-tag">.docx</span>
-          <span class="cu-tag">.pdf</span>
-          <span class="cu-tag">.txt</span>
-          <span class="cu-tag">до 50 файлов</span>
+        <!-- Background Beams -->
+        <div class="beams-wrap">
+          <svg viewBox="0 0 696 316" xmlns="http://www.w3.org/2000/svg">
+            <path class="beam-bg" d="M-380 -189C-380 -189 -312 216 152 343C616 470 684 875 684 875M-373 -197C-373 -197 -305 208 159 335C623 462 691 867 691 867M-366 -205C-366 -205 -298 200 166 327C630 454 698 859 698 859M-359 -213C-359 -213 -291 192 173 319C637 446 705 851 705 851M-352 -221C-352 -221 -284 184 180 311C644 438 712 843 712 843M-345 -229C-345 -229 -277 176 187 303C651 430 719 835 719 835M-338 -237C-338 -237 -270 168 194 295C658 422 726 827 726 827M-331 -245C-331 -245 -263 160 201 287C665 414 733 819 733 819M-324 -253C-324 -253 -256 152 208 279C672 406 740 811 740 811M-317 -261C-317 -261 -249 144 215 271C679 398 747 803 747 803M-310 -269C-310 -269 -242 136 222 263C686 390 754 795 754 795M-303 -277C-303 -277 -235 128 229 255C693 382 761 787 761 787M-296 -285C-296 -285 -228 120 236 247C700 374 768 779 768 779M-289 -293C-289 -293 -221 112 243 239C707 366 775 771 775 771M-282 -301C-282 -301 -214 104 250 231C714 358 782 763 782 763M-275 -309C-275 -309 -207 96 257 223C721 350 789 755 789 755M-268 -317C-268 -317 -200 88 264 215C728 342 796 747 796 747M-261 -325C-261 -325 -193 80 271 207C735 334 803 739 803 739M-254 -333C-254 -333 -186 72 278 199C742 326 810 731 810 731M-247 -341C-247 -341 -179 64 285 191C749 318 817 723 817 723"/>
+            <defs>
+              <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#18CCFC" stop-opacity="0"/><stop offset="30%" stop-color="#18CCFC"/><stop offset="60%" stop-color="#6344F5"/><stop offset="100%" stop-color="#AE48FF" stop-opacity="0"/></linearGradient>
+              <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#AE48FF" stop-opacity="0"/><stop offset="30%" stop-color="#6344F5"/><stop offset="60%" stop-color="#18CCFC"/><stop offset="100%" stop-color="#18CCFC" stop-opacity="0"/></linearGradient>
+              <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#18CCFC" stop-opacity="0"/><stop offset="40%" stop-color="#AE48FF"/><stop offset="70%" stop-color="#6344F5"/><stop offset="100%" stop-color="#18CCFC" stop-opacity="0"/></linearGradient>
+            </defs>
+            <path class="beam" d="M-380 -189C-380 -189 -312 216 152 343C616 470 684 875 684 875" stroke="url(#bg1)" style="animation-duration:8s;animation-delay:0s"/>
+            <path class="beam" d="M-338 -237C-338 -237 -270 168 194 295C658 422 726 827 726 827" stroke="url(#bg2)" style="animation-duration:12s;animation-delay:2s"/>
+            <path class="beam" d="M-296 -285C-296 -285 -228 120 236 247C700 374 768 779 768 779" stroke="url(#bg1)" style="animation-duration:10s;animation-delay:4s"/>
+            <path class="beam" d="M-254 -333C-254 -333 -186 72 278 199C742 326 810 731 810 731" stroke="url(#bg3)" style="animation-duration:14s;animation-delay:1s"/>
+            <path class="beam" d="M-212 -381C-212 -381 -144 24 320 151C784 278 852 683 852 683" stroke="url(#bg2)" style="animation-duration:9s;animation-delay:6s"/>
+            <path class="beam" d="M-170 -429C-170 -429 -102 -24 362 103C826 230 894 635 894 635" stroke="url(#bg1)" style="animation-duration:11s;animation-delay:3s"/>
+            <path class="beam" d="M-128 -477C-128 -477 -60 -72 404 55C868 182 936 587 936 587" stroke="url(#bg3)" style="animation-duration:13s;animation-delay:5s"/>
+            <path class="beam" d="M-86 -525C-86 -525 -18 -120 446 7C910 134 978 539 978 539" stroke="url(#bg2)" style="animation-duration:10s;animation-delay:7s"/>
+            <path class="beam" d="M-44 -573C-44 -573 24 -168 488 -41C952 86 1020 491 1020 491" stroke="url(#bg1)" style="animation-duration:15s;animation-delay:0.5s"/>
+            <path class="beam" d="M-359 -213C-359 -213 -291 192 173 319C637 446 705 851 705 851" stroke="url(#bg3)" style="animation-duration:11s;animation-delay:8s"/>
+            <path class="beam" d="M-317 -261C-317 -261 -249 144 215 271C679 398 747 803 747 803" stroke="url(#bg2)" style="animation-duration:9s;animation-delay:3.5s"/>
+            <path class="beam" d="M-275 -309C-275 -309 -207 96 257 223C721 350 789 755 789 755" stroke="url(#bg1)" style="animation-duration:12s;animation-delay:6.5s"/>
+            <path class="beam" d="M-233 -357C-233 -357 -165 48 299 175C763 302 831 707 831 707" stroke="url(#bg3)" style="animation-duration:14s;animation-delay:1.5s"/>
+            <path class="beam" d="M-191 -405C-191 -405 -123 0 341 127C805 254 873 659 873 659" stroke="url(#bg2)" style="animation-duration:10s;animation-delay:9s"/>
+            <path class="beam" d="M-149 -453C-149 -453 -81 -48 383 79C847 206 915 611 915 611" stroke="url(#bg1)" style="animation-duration:13s;animation-delay:4.5s"/>
+          </svg>
+        </div>
+        <!-- Content -->
+        <div style="position:relative;z-index:2">
+          <div class="cu-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
+          <h2 style="font-size:18px;font-weight:700;color:#e2e8f0;margin-bottom:6px">Загрузите отчёты для проверки</h2>
+          <p style="font-size:13px;color:#64748b;margin-bottom:16px">Перетащите файлы сюда или нажмите для выбора</p>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <span class="cu-tag">.docx</span>
+            <span class="cu-tag">.pdf</span>
+            <span class="cu-tag">.txt</span>
+            <span class="cu-tag">до 50 файлов</span>
+          </div>
         </div>
       </div>
     </div>
