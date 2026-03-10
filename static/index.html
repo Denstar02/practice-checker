@@ -156,6 +156,24 @@
     .rbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);font-size:13px;font-weight:600;color:#94a3b8;cursor:pointer;transition:all .2s;font-family:'Inter',sans-serif}
     .rbtn:hover{border-color:rgba(99,102,241,.3);color:#818cf8}
 
+    /* Criteria editor */
+    .crit-editor{background:rgba(15,23,42,.7);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;margin-bottom:20px}
+    .ce-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .ce-header h3{font-size:14px;font-weight:700;color:#e2e8f0}
+    .ce-item{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px;margin-bottom:8px;position:relative}
+    .ce-item:hover{border-color:rgba(99,102,241,.2)}
+    .ce-item input,.ce-item textarea{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:8px 12px;color:#e2e8f0;font-family:'Inter',sans-serif;font-size:13px;outline:none;resize:vertical}
+    .ce-item input:focus,.ce-item textarea:focus{border-color:rgba(99,102,241,.4)}
+    .ce-item input{margin-bottom:6px;font-weight:600}
+    .ce-item textarea{min-height:48px;font-size:12px;color:#94a3b8}
+    .ce-item .ce-rm{position:absolute;top:10px;right:10px;width:24px;height:24px;border:none;background:rgba(239,68,68,.1);color:#f87171;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+    .ce-item:hover .ce-rm{opacity:1}
+    .ce-add{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border-radius:10px;border:1px dashed rgba(99,102,241,.3);background:transparent;color:#818cf8;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;margin-top:4px}
+    .ce-add:hover{background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.5)}
+    .edit-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:#94a3b8;font-size:11px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
+    .edit-btn:hover{border-color:rgba(99,102,241,.3);color:#818cf8;background:rgba(99,102,241,.06)}
+    .ce-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:#475569;margin-bottom:6px}
+
     .hidden{display:none!important}
     @keyframes spin{to{transform:rotate(360deg)}}
     .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.1);border-top-color:#818cf8;border-radius:50%;animation:spin .8s linear infinite;display:inline-block}
@@ -206,7 +224,7 @@
     <h1>Анализ отчетов</h1>
   </div>
   <div class="sep"></div>
-  <span style="font-size:11px;color:#64748b">Проверка отчетов по практике с помощью ИИ</span>
+  <span style="font-size:11px;color:#64748b">Проверка отчетов по педагогической практике</span>
   <div class="model-area">
     <span class="badge">API подключён</span>
     <select id="modelSel"></select>
@@ -249,8 +267,27 @@
 
     <!-- Welcome + Central Upload -->
     <div id="welcomeArea">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="sl" style="text-align: center; width: 100%;">Критерии проверки</div>
+        <button class="edit-btn" onclick="toggleEditor()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <span id="editBtnText">Настроить</span>
+        </button>
+      </div>
       <div class="bg-grid" id="bentoGrid"></div>
+
+      <!-- Criteria editor (hidden by default) -->
+      <div id="critEditor" class="crit-editor hidden">
+        <div class="ce-header">
+          <h3>Редактор критериев</h3>
+          <span style="font-size:11px;color:#64748b" id="ceCount">4 критерия</span>
+        </div>
+        <div id="ceList"></div>
+        <button class="ce-add" onclick="addCriterion()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Добавить критерий
+        </button>
+      </div>
 
       <div id="uploadZone" class="center-upload">
         <div style="position:relative;z-index:2">
@@ -279,17 +316,82 @@
 </div>
 
 <script>
-const files=[];let isRunning=false;
-const CRITERIA=[
-  {id:1,title:"Анализ нормативной документации",short:"Нормативная документация",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>',accent:"#6366f1",al:"#eef2ff",desc:"ФГОС СПО, ОПОП, учебный план, рабочие программы дисциплин, профессиональных модулей, МДК. Подробный анализ рабочей программы."},
-  {id:2,title:"Место дисциплины",short:"Место дисциплины",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',accent:"#f59e0b",al:"#fffbeb",desc:"Вклад дисциплины в компетенции. Курс, объём, виды нагрузки, распределение времени. Табличное представление."},
-  {id:3,title:"Междисциплинарные связи",short:"Междисциплинарные связи",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>',accent:"#10b981",al:"#ecfdf5",desc:"Предшествующие, сопутствующие и последующие связи. Базовые темы из ПМ и МДК. Схема связей."},
-  {id:4,title:"Внутридисциплинарные связи",short:"Внутридисциплинарные связи",icon:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',accent:"#ec4899",al:"#fdf2f8",desc:"Анализ тематического (КТП) плана. Связи темы. Схема или текстовое описание."},
+const files=[];let isRunning=false;let editorOpen=false;
+const ACCENTS=["#6366f1","#f59e0b","#10b981","#ec4899","#8b5cf6","#06b6d4","#f97316","#14b8a6","#e11d48","#7c3aed"];
+const ICONS=[
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="16" y="16" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="9" y="2" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"/><path d="M12 12V8"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>',
 ];
 
-// Bento
-const grid=document.getElementById("bentoGrid");
-CRITERIA.forEach(c=>{grid.innerHTML+=`<div class="bc" style="background:linear-gradient(135deg,${c.accent}0a 0%,rgba(15,23,42,.4) 70%);border-color:${c.accent}15"><div class="blob" style="background:radial-gradient(circle,${c.accent} 0%,transparent 70%)"></div><div style="position:relative;z-index:1"><div class="iw" style="background:${c.accent}15;color:${c.accent}">${c.icon}</div><h3>${c.short}</h3><p>${c.desc}</p></div></div>`});
+let CRITERIA=[
+  {id:1,title:"Анализ нормативной документации",short:"Анализ нормативной документации",desc:"ФГОС СПО, ОПОП, учебный план, рабочие программы дисциплин, профессиональных модулей, МДК. Подробный анализ рабочей программы."},
+  {id:2,title:"Место дисциплины",short:"Место дисциплины",desc:"Вклад дисциплины в компетенции. Курс, объём, виды нагрузки, распределение времени. Табличное представление."},
+  {id:3,title:"Междисциплинарные связи",short:"Междисциплинарные связи",desc:"Предшествующие, сопутствующие и последующие связи. Базовые темы из ПМ и МДК. Схема связей."},
+  {id:4,title:"Внутридисциплинарные связи",short:"Внутридисциплинарные связи",desc:"Анализ тематического (КТП) плана. Связи темы. Схема или текстовое описание."},
+];
+
+function getAccent(i){return ACCENTS[i%ACCENTS.length]}
+function getIcon(i){return ICONS[i%ICONS.length]}
+
+// Render bento grid from CRITERIA
+function renderBento(){
+  const grid=document.getElementById("bentoGrid");
+  grid.style.gridTemplateColumns=`repeat(${Math.min(CRITERIA.length,4)},1fr)`;
+  grid.innerHTML=CRITERIA.map((c,i)=>{
+    const a=getAccent(i);
+    return`<div class="bc" style="background:linear-gradient(135deg,${a}0a 0%,rgba(15,23,42,.4) 70%);border-color:${a}15"><div class="blob" style="background:radial-gradient(circle,${a} 0%,transparent 70%)"></div><div style="position:relative;z-index:1"><div class="iw" style="background:${a}15;color:${a}">${getIcon(i)}</div><h3>${c.short||c.title}</h3><p>${c.desc}</p></div></div>`
+  }).join("");
+}
+renderBento();
+
+// Criteria editor
+function toggleEditor(){
+  editorOpen=!editorOpen;
+  document.getElementById("critEditor").classList.toggle("hidden",!editorOpen);
+  document.getElementById("bentoGrid").classList.toggle("hidden",editorOpen);
+  document.getElementById("editBtnText").textContent=editorOpen?"Готово":"Настроить";
+  if(editorOpen)renderEditor();
+  else renderBento();
+}
+
+function renderEditor(){
+  const list=document.getElementById("ceList");
+  document.getElementById("ceCount").textContent=`${CRITERIA.length} ${CRITERIA.length===1?"критерий":CRITERIA.length<5?"критерия":"критериев"}`;
+  list.innerHTML=CRITERIA.map((c,i)=>`
+    <div class="ce-item">
+      <div class="ce-num">Критерий ${i+1}</div>
+      <input value="${c.title}" placeholder="Название критерия" oninput="updCrit(${i},'title',this.value)">
+      <textarea placeholder="Описание: что проверять" oninput="updCrit(${i},'desc',this.value)">${c.desc}</textarea>
+      ${CRITERIA.length>1?`<button class="ce-rm" onclick="rmCrit(${i})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`:""}
+    </div>`).join("");
+}
+
+function updCrit(i,field,val){
+  CRITERIA[i][field]=val;
+  if(field==="title")CRITERIA[i].short=val.length>16?val.substring(0,16)+"…":val;
+}
+
+function addCriterion(){
+  CRITERIA.push({id:Date.now(),title:"",short:"Новый критерий",desc:""});
+  renderEditor();
+  // Focus the new input
+  const inputs=document.querySelectorAll("#ceList .ce-item input");
+  if(inputs.length)inputs[inputs.length-1].focus();
+}
+
+function rmCrit(i){
+  CRITERIA.splice(i,1);
+  renderEditor();
+}
+
+// Build criteria payload for server
+function getCriteriaPayload(){
+  return CRITERIA.filter(c=>c.title.trim()).map(c=>({title:c.title,description:c.desc}));
+}
 
 // Models
 (async()=>{try{const r=await fetch("/api/models");const m=await r.json();const s=document.getElementById("modelSel");s.innerHTML="";m.forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name;s.appendChild(o)})}catch(e){console.warn(e)}})();
@@ -379,6 +481,7 @@ async function extractText(file){
 }
 
 async function startBatch(){
+  if(editorOpen)toggleEditor(); // close editor
   const ready=files.filter(f=>f.status==="ready"||f.status==="error");
   if(!ready.length)return;
   isRunning=true;const btn=document.getElementById("analyzeBtn");btn.disabled=true;
@@ -393,7 +496,7 @@ async function startBatch(){
     document.getElementById("pbarPct").textContent=`${done}/${total}`;
     document.getElementById("pbarFill").style.width=Math.round(done/total*100)+"%";
     try{
-      const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:f.text,model})});
+      const res=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:f.text,model,criteria:getCriteriaPayload()})});
       if(!res.ok){const e=await res.json().catch(()=>({error:`HTTP ${res.status}`}));throw new Error(e.error||`HTTP ${res.status}`)}
       const data=await res.json();if(data.error)throw new Error(data.error);
       f.result=data;f.status="done";
@@ -417,7 +520,7 @@ function renderResults(){
   if(ok.length){
     const avg=Math.round(ok.reduce((s,f)=>s+(f.result?.overall_score||0),0)/ok.length);
     h+=`<div class="sl">Сводная таблица — ${ok.length} отчётов, средний: <span style="color:${sColor(avg)};font-size:12px">${avg}</span></div>
-    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Файл</th><th style="text-align:center">Общий</th>${CRITERIA.map(c=>`<th style="text-align:center">${c.short}</th>`).join("")}<th>Статус</th></tr></thead><tbody>`;
+    <div style="overflow-x:auto"><table class="stbl"><thead><tr><th>Файл</th><th style="text-align:center">Общий</th>${CRITERIA.map(c=>`<th style="text-align:center">${c.short||c.title.substring(0,16)}</th>`).join("")}<th>Статус</th></tr></thead><tbody>`;
     ok.forEach(f=>{const r=f.result,sc=r?.overall_score||0;
       h+=`<tr><td class="fname-cell">${f.name}</td><td style="text-align:center"><span class="sc" style="font-size:16px;color:${sColor(sc)}">${sc}</span></td>${CRITERIA.map((_,i)=>{const s=r?.criteria?.[i]?.score;return`<td style="text-align:center"><span class="sc" style="font-size:13px;color:${sColor(s)}">${s??"-"}</span></td>`}).join("")}<td>${sc>=70?'<span class="status-badge sd">соотв.</span>':sc>=40?'<span class="status-badge sp">доработка</span>':'<span class="status-badge sm">переработка</span>'}</td></tr>`});
     h+=`</tbody></table></div>`;
@@ -434,9 +537,9 @@ function renderResults(){
         <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
       </div><div class="rfile-b">
         <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;line-height:1.6">${r?.overall_summary||""}</p>
-        <div class="ms">${CRITERIA.map((_,i)=>{const s=r?.criteria?.[i]?.score||0;return`<div class="mc"><div class="s" style="color:${sColor(s)}">${s}</div><div class="n">${CRITERIA[i].short}</div></div>`}).join("")}</div>
-        ${CRITERIA.map((c,i)=>{const cr=r?.criteria?.[i];if(!cr)return"";const stc=cr.status==="выполнено"?"sd":cr.status==="не выполнено"?"sm":"sp";
-          return`<div class="crit-card"><div class="crit-h" onclick="tog(this)"><div style="color:${c.accent}">${c.icon}</div><div class="ct"><h5>${c.title}</h5><span class="status-badge ${stc}">${cr.status}</span></div><span class="mono" style="font-size:12px;font-weight:700;color:${sColor(cr.score)}">${cr.score}</span><svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
+        <div class="ms">${CRITERIA.map((_,i)=>{const s=r?.criteria?.[i]?.score||0;return`<div class="mc"><div class="s" style="color:${sColor(s)}">${s}</div><div class="n">${CRITERIA[i].short||CRITERIA[i].title.substring(0,16)}</div></div>`}).join("")}</div>
+        ${CRITERIA.map((c,i)=>{const cr=r?.criteria?.[i];if(!cr)return"";const stc=cr.status==="выполнено"?"sd":cr.status==="не выполнено"?"sm":"sp";const ac=getAccent(i);
+          return`<div class="crit-card"><div class="crit-h" onclick="tog(this)"><div style="color:${ac}">${getIcon(i)}</div><div class="ct"><h5>${c.title}</h5><span class="status-badge ${stc}">${cr.status}</span></div><span class="mono" style="font-size:12px;font-weight:700;color:${sColor(cr.score)}">${cr.score}</span><svg class="chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></div>
           <div class="crit-b"><div class="cm">${cr.comment||""}</div>
           ${cr.found_elements?.length?`<div class="tag-section"><div class="tag-label" style="color:#34d399">✓ Обнаружено</div><div class="tags">${cr.found_elements.map(e=>`<span class="tag tg">${e}</span>`).join("")}</div></div>`:""}
           ${cr.missing_elements?.length?`<div class="tag-section"><div class="tag-label" style="color:#f87171">✗ Отсутствует</div><div class="tags">${cr.missing_elements.map(e=>`<span class="tag tr">${e}</span>`).join("")}</div></div>`:""}
