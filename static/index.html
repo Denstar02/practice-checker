@@ -38,6 +38,16 @@
     .sb-upload .t1{font-size:13px;font-weight:600;color:#333}
     .sb-upload .t2{font-size:11px;color:#aaa;margin-top:2px}
 
+    .sb-add{padding:10px 20px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .2s;text-align:center;font-size:12px;font-weight:600;color:#6366f1;display:flex;align-items:center;justify-content:center;gap:6px}
+    .sb-add:hover{background:#eef2ff}
+
+    /* Center upload */
+    .center-upload{border-radius:20px;border:2px dashed #ddd;padding:48px 32px;text-align:center;cursor:pointer;transition:all .3s;margin-top:8px;background:#fff}
+    .center-upload:hover{border-color:#a5b4fc;background:rgba(99,102,241,.02);transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,.08)}
+    .center-upload.drag{border-color:#6366f1;background:rgba(99,102,241,.04);box-shadow:0 0 0 4px rgba(99,102,241,.1)}
+    .cu-icon{width:64px;height:64px;border-radius:20px;background:#eef2ff;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+    .cu-tag{font-size:11px;color:#6366f1;background:#eef2ff;padding:4px 12px;border-radius:8px;font-weight:500}
+
     .sb-files{flex:1;overflow-y:auto;padding:8px 12px}
     .sf{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:4px;transition:background .15s;cursor:default}
     .sf:hover{background:#f8f8fb}
@@ -170,14 +180,12 @@
       <span id="fileCount" class="cnt" style="display:none">0</span>
     </div>
 
-    <div id="uploadZone" class="sb-upload">
-      <input type="file" id="fileInput" accept=".docx,.pdf,.txt" multiple style="display:none">
-      <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
-      <div class="t1">Загрузить файлы</div>
-      <div class="t2">.docx .pdf .txt • до 50</div>
-    </div>
-
     <div id="fileList" class="sb-files"></div>
+
+    <div id="sbAddMore" class="sb-add hidden" onclick="document.getElementById('fileInput').click()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Добавить ещё
+    </div>
 
     <div id="pbarWrap" class="pbar-wrap hidden">
       <div class="pbar-info"><span id="pbarLabel">Обработка...</span><span id="pbarPct">0/0</span></div>
@@ -194,14 +202,23 @@
 
   <!-- ── Main ── -->
   <div class="main">
-    <!-- Welcome / Criteria -->
+    <input type="file" id="fileInput" accept=".docx,.pdf,.txt" multiple style="display:none">
+
+    <!-- Welcome + Central Upload -->
     <div id="welcomeArea">
       <div class="sl">Критерии проверки</div>
       <div class="bg-grid" id="bentoGrid"></div>
-      <div class="welcome">
-        <div class="wic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
-        <h2>Загрузите отчёты</h2>
-        <p>Перетащите файлы в панель слева или нажмите «Загрузить файлы». После загрузки нажмите «Запустить анализ».</p>
+
+      <div id="uploadZone" class="center-upload">
+        <div class="cu-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg></div>
+        <h2 style="font-size:18px;font-weight:700;color:#333;margin-bottom:6px">Загрузите отчёты для проверки</h2>
+        <p style="font-size:13px;color:#999;margin-bottom:16px">Перетащите файлы сюда или нажмите для выбора</p>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <span class="cu-tag">.docx</span>
+          <span class="cu-tag">.pdf</span>
+          <span class="cu-tag">.txt</span>
+          <span class="cu-tag">до 50 файлов</span>
+        </div>
       </div>
     </div>
 
@@ -232,7 +249,7 @@ CRITERIA.forEach(c=>{grid.innerHTML+=`<div class="bc" style="background:linear-g
 // Models
 (async()=>{try{const r=await fetch("/api/models");const m=await r.json();const s=document.getElementById("modelSel");s.innerHTML="";m.forEach(x=>{const o=document.createElement("option");o.value=x.id;o.textContent=x.name;s.appendChild(o)})}catch(e){console.warn(e)}})();
 
-// Upload
+// Upload - center zone + drag on main
 const zone=document.getElementById("uploadZone"),inp=document.getElementById("fileInput");
 zone.addEventListener("click",()=>inp.click());
 zone.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag")});
@@ -240,11 +257,11 @@ zone.addEventListener("dragleave",()=>zone.classList.remove("drag"));
 zone.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("drag");addFiles(e.dataTransfer.files)});
 inp.addEventListener("change",()=>{addFiles(inp.files);inp.value=""});
 
-// Also allow drop on sidebar
-const sidebar=document.querySelector(".sidebar");
-sidebar.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag")});
-sidebar.addEventListener("dragleave",e=>{if(!sidebar.contains(e.relatedTarget))zone.classList.remove("drag")});
-sidebar.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("drag");addFiles(e.dataTransfer.files)});
+// Also allow drop on entire main area
+const mainEl=document.querySelector(".main");
+mainEl.addEventListener("dragover",e=>{e.preventDefault();zone.classList.add("drag")});
+mainEl.addEventListener("dragleave",e=>{if(!mainEl.contains(e.relatedTarget))zone.classList.remove("drag")});
+mainEl.addEventListener("drop",e=>{e.preventDefault();zone.classList.remove("drag");addFiles(e.dataTransfer.files)});
 
 async function addFiles(fl){
   hideError();
@@ -272,8 +289,12 @@ function removeFile(idx){
 function updateBtn(){
   const ready=files.filter(f=>f.status==="ready").length;
   const act=document.getElementById("actionArea");
+  const addMore=document.getElementById("sbAddMore");
   if(ready>0){act.classList.remove("hidden");document.getElementById("btnText").textContent=`Анализ (${ready} ${ready===1?"файл":ready<5?"файла":"файлов"})`}
   else if(!files.length){act.classList.add("hidden")}
+  // Show/hide sidebar add-more and center upload
+  if(files.length>0){addMore.classList.remove("hidden")}
+  else{addMore.classList.add("hidden")}
   document.getElementById("fileCount").style.display=files.length?"inline":"none";
   document.getElementById("fileCount").textContent=files.length;
 }
@@ -382,7 +403,7 @@ function renderResults(){
 }
 
 function tog(el){el.nextElementSibling.classList.toggle("open");el.querySelector(".chevron").classList.toggle("open")}
-function resetAll(){files.length=0;isRunning=false;document.getElementById("actionArea").classList.add("hidden");document.getElementById("resultsArea").classList.add("hidden");document.getElementById("resultsArea").innerHTML="";document.getElementById("welcomeArea").classList.remove("hidden");renderFileList();updateBtn();inp.value=""}
+function resetAll(){files.length=0;isRunning=false;document.getElementById("actionArea").classList.add("hidden");document.getElementById("resultsArea").classList.add("hidden");document.getElementById("resultsArea").innerHTML="";document.getElementById("welcomeArea").classList.remove("hidden");document.getElementById("sbAddMore").classList.add("hidden");renderFileList();updateBtn();inp.value=""}
 function showError(m){document.getElementById("errorArea").classList.remove("hidden");document.getElementById("errorText").textContent=m}
 function hideError(){document.getElementById("errorArea").classList.add("hidden")}
 </script>
