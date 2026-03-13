@@ -249,7 +249,7 @@
   <span style="font-size:11px;color:#94a3b8">Проверка отчётов по педагогической практике</span>
   <div class="model-area">
       <div class="mp-current">
-        <span class="mp-rec">рек.</span>
+        <span class="mp-rec" id="mpRec">рек.</span>
         <span class="mp-name" id="mpName">Загрузка...</span>
         <button class="mp-change" onclick="toggleModelPicker()">Изменить</button>
       </div>
@@ -443,6 +443,7 @@ let selectedModel=RECOMMENDED;
 function updateModelDisplay(){
   const m=allModels.find(x=>x.id===selectedModel);
   document.getElementById("mpName").textContent=m?m.name:selectedModel.split("/").pop();
+  document.getElementById("mpRec").style.display=selectedModel===RECOMMENDED?"inline":"none";
   document.getElementById("modelSel").value=selectedModel;
   renderModelDropdown();
 }
