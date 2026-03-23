@@ -1,22 +1,13 @@
-"""
-Бэкенд-сервер для анализа отчётов по педагогической практике.
-Проксирует запросы к IO Intelligence API, чтобы API-ключ
-оставался на сервере и не попадал в браузер.
-
-Запуск:
-    pip install flask flask-cors
-    python server.py
-"""
-
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import requests
 import os
+import json
+import re
 
 app = Flask(__name__, static_folder="static")
 CORS(app)
 
-# ─── Настройки API ───
 IO_API_URL = "https://api.intelligence.io.solutions/api/v1/chat/completions"
 IO_API_KEY = os.environ.get(
     "IO_API_KEY",
@@ -25,7 +16,6 @@ IO_API_KEY = os.environ.get(
 DEFAULT_MODEL = "meta-llama/Llama-3.3-70B-Instruct"
 
 def build_prompt(criteria_list):
-    """Строит системный промпт из списка критериев."""
     crit_text = ""
     for i, c in enumerate(criteria_list, 1):
         title = c.get("title", f"Критерий {i}")
@@ -65,7 +55,6 @@ def index():
 
 @app.route("/api/models", methods=["GET"])
 def get_models():
-    """Получить список моделей от IO Intelligence API."""
     try:
         resp = requests.get(
             "https://api.intelligence.io.solutions/api/v1/models",
@@ -74,7 +63,6 @@ def get_models():
         )
         if resp.status_code == 200:
             data = resp.json()
-            # Формат OpenAI: { "data": [ { "id": "..." }, ... ] }
             models = data.get("data", [])
             result = [{"id": m.get("id"), "name": m.get("id", "").split("/")[-1]} for m in models if m.get("id")]
             print(f"[INFO] Доступные модели: {[m['id'] for m in result[:5]]}...")
@@ -84,7 +72,6 @@ def get_models():
     except Exception as e:
         print(f"[WARN] Ошибка при получении моделей: {e}")
 
-    # Fallback — статический список
     return jsonify([
         {"id": "meta-llama/Llama-3.3-70B-Instruct", "name": "Llama 3.3 70B"},
         {"id": "deepseek-ai/DeepSeek-V3", "name": "DeepSeek V3"},
@@ -95,7 +82,6 @@ def get_models():
 
 @app.route("/api/test", methods=["GET"])
 def test_api():
-    """Тест подключения к IO Intelligence API."""
     try:
         resp = requests.post(
             IO_API_URL,
@@ -119,16 +105,11 @@ def test_api():
 
 @app.route("/api/analyze", methods=["POST"])
 def analyze():
-    """
-    Принимает JSON: { "text": "...", "model": "..." }
-    Проксирует запрос к IO Intelligence API.
-    """
     data = request.get_json()
     text = data.get("text", "")
     model = data.get("model", DEFAULT_MODEL)
     criteria = data.get("criteria", None)
 
-    # Дефолтные критерии
     if not criteria:
         criteria = [
             {"title": "Анализ нормативной и учебно-программной документации",
@@ -146,7 +127,6 @@ def analyze():
     if not text.strip():
         return jsonify({"error": "Текст отчёта пуст"}), 400
 
-    # Обрезаем до 12000 символов
     if len(text) > 12000:
         text = text[:12000] + "\n\n[...текст обрезан до 12000 символов...]"
 
@@ -177,7 +157,6 @@ def analyze():
             timeout=120,
         )
 
-        # Логируем ответ при ошибке
         if resp.status_code != 200:
             print(f"[ERROR] API status={resp.status_code}, body={resp.text[:500]}")
             return jsonify({
@@ -190,21 +169,16 @@ def analyze():
         if not content:
             return jsonify({"error": "Пустой ответ от API"}), 502
 
-        # Пытаемся распарсить JSON — с несколькими уровнями восстановления
-        import json, re
-
         content_clean = re.sub(r"```json\s*", "", content)
         content_clean = re.sub(r"```\s*", "", content_clean).strip()
 
         parsed = None
 
-        # Попытка 1: прямой парсинг
         try:
             parsed = json.loads(content_clean)
         except json.JSONDecodeError:
             pass
 
-        # Попытка 2: извлечь JSON-объект из текста
         if parsed is None:
             m = re.search(r"\{[\s\S]*\}", content)
             if m:
@@ -213,25 +187,18 @@ def analyze():
                 except json.JSONDecodeError:
                     pass
 
-        # Попытка 3: исправить частые ошибки LLM в JSON
         if parsed is None:
             try:
                 fixed = content_clean
-                # Убрать управляющие символы внутри строк
                 fixed = re.sub(r'[\x00-\x1f]', ' ', fixed)
-                # Исправить одинарные кавычки на двойные
-                # Экранировать неэкранированные кавычки внутри строк
-                # Попробовать найти JSON-блок
                 m = re.search(r'\{[\s\S]*\}', fixed)
                 if m:
                     block = m.group(0)
-                    # Попробовать починить trailing commas
                     block = re.sub(r',\s*([}\]])', r'\1', block)
                     parsed = json.loads(block)
             except json.JSONDecodeError:
                 pass
 
-        # Попытка 4: повторный запрос к API с просьбой вернуть валидный JSON
         if parsed is None:
             print(f"[WARN] JSON не распознан, пробуем повторный запрос для починки...")
             try:
